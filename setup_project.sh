@@ -338,7 +338,7 @@ app = Flask(__name__)
 
 @app.route("/editor", methods=["GET", "POST"])
 def editor():
-    config_path = os.getenv("CONFIG_PATH", "configs/green_travel.yaml")
+    config_path = os.getenv("CONFIG_PATH", "configs/default.yaml")
     if request.method == "POST":
         data = request.form.get("config")
         with open(config_path, "w", encoding="utf-8") as f:
@@ -348,7 +348,7 @@ def editor():
         config_content = f.read()
     return render_template_string("""
         <form method="post">
-            <textarea name="config" rows="20" cols="80">{{ config_content }}</textarea><br>
+            <textarea name="config" rows="20" cols=80">{{ config_content }}</textarea><br>
             <button type="submit">Save</button>
         </form>
     """, config_content=config_content)
@@ -447,7 +447,7 @@ async def start_telegram(client_id: str, telegram_token: str):
         raise
 
 if __name__ == "__main__":
-    asyncio.run(start_telegram("green_travel", "green-telegram-token"))
+    asyncio.run(start_telegram("${CLIENT_ID}", "${TELEGRAM_TOKEN}"))
 EOF
 
 # ui/whatsapp_evolution/__init__.py
@@ -495,7 +495,7 @@ async def webhook_handler(request):
         await send_message(user_id, response, request.app["api_url"], request.app["api_key"])
     return web.Response(text="OK")
 
-async def start_whatsapp(client_id: str, api_url: str, api_key: str, webhook_url: str, port=8000):
+async def start_whatsapp(client_id: str, api_url: str, api_key: str, webhook_url: str, port=8080):
     app = web.Application()
     app["client_id"] = client_id
     app["api_url"] = api_url
@@ -523,7 +523,7 @@ async def start_whatsapp(client_id: str, api_url: str, api_key: str, webhook_url
     await asyncio.Event().wait()  # Keep running
 
 if __name__ == "__main__":
-    asyncio.run(start_whatsapp("green_travel", "http://evolution_api_green_travel:8080", "green-whatsapp-key", "http://localhost:8000/webhook", 8080))
+    asyncio.run(start_whatsapp("${CLIENT_ID}", "http://evolution-api:8080", "${WHATSAPP_API_KEY}", "http://localhost:8080/webhook", 8080))
 EOF
 
 # ui/instagram/__init__.py
@@ -580,7 +580,7 @@ async def start_instagram(client_id: str, username: str, password: str, verifica
             await asyncio.sleep(60)
 
 if __name__ == "__main__":
-    asyncio.run(start_instagram("green_travel", "green_travel_inst", "your-instagram-password"))
+    asyncio.run(start_instagram("${CLIENT_ID}", "${INSTAGRAM_USERNAME}", "${INSTAGRAM_PASSWORD}"))
 EOF
 
 # ui/tiktok/__init__.py
@@ -638,7 +638,7 @@ async def start_tiktok(client_id: str, manychat_api_token: str):
             await asyncio.sleep(60)  # Проверяем каждую минуту
 
 if __name__ == "__main__":
-    asyncio.run(start_tiktok("green_travel", "your-manychat-api-token"))
+    asyncio.run(start_tiktok("${CLIENT_ID}", "${MANYCHAT_API_TOKEN}"))
 EOF
 
 # Dockerfile.fundament
@@ -660,21 +660,21 @@ cat << 'EOF' > ai-agent-platform/docker-compose.yml
 version: '3.8'
 
 services:
-  ai_agent_green_travel:
+  ai_agent:
     build:
       context: .
       dockerfile: Dockerfile.fundament
     ports:
       - "8000:8000"
     environment:
-      - CLIENT_ID=green_travel
+      - CLIENT_ID=${CLIENT_ID}
     depends_on:
       - mongodb
     restart: unless-stopped
     networks:
       app-network:
         aliases:
-          - ai_agent_green_travel
+          - ai_agent
 
   mongodb:
     image: mongo:6
@@ -706,13 +706,13 @@ services:
         aliases:
           - n8n
 
-  evolution_api_green_travel:
+  evolution_api:
     image: atendai/evolution-api:latest
     ports:
       - "8080:8080"
     environment:
-      - API_KEY=green-whatsapp-key
-      - WEBHOOK_URL=http://ai_agent_green_travel:8000/webhook
+      - API_KEY=${WHATSAPP_API_KEY}
+      - WEBHOOK_URL=http://ai_agent:8000/webhook
       - DB_TYPE=mongodb
       - DB_HOST=mongodb
       - DB_PORT=27017
@@ -723,7 +723,7 @@ services:
     networks:
       app-network:
         aliases:
-          - evolution_api_green_travel
+          - evolution-api
 
   init_mongo:
     build:
@@ -767,21 +767,50 @@ async def init_mongo():
     client = AsyncIOMotorClient("mongodb://mongodb:27017")
     db = client["ai_agent"]
     
-    # Добавление клиента GreenTravel
-    client_data = {
-        "client_id": "green_travel",
-        "name": "GreenTravel",
-        "config_file": "configs/green_travel.yaml",
-        "persona": "дружелюбный экологический гид",
-        "tone": "дружелюбный",
-        "messengers": {
-            "telegram": {"token": "green-telegram-token"},
-            "whatsapp": {"api_key": "green-whatsapp-key", "webhook_url": "http://ai_agent_green_travel:8000/webhook"},
-            "instagram": {"username": "green_travel_inst", "password": "your-instagram-password"},
-            "tiktok": {"manychat_api_token": "your-manychat-api-token"}
+    # Добавление клиентов
+    clients = [
+        {
+            "client_id": "tourism",
+            "name": "Tourism Agency",
+            "config_file": "configs/tourism.yaml",
+            "persona": "дружелюбный турагент",
+            "tone": "дружелюбный",
+            "messengers": {
+                "telegram": {"token": "tourism-telegram-token"},
+                "whatsapp": {"api_key": "tourism-whatsapp-key", "webhook_url": "http://ai_agent:8000/webhook"},
+                "instagram": {"username": "tourism_inst", "password": "your-tourism-password"},
+                "tiktok": {"manychat_api_token": "tourism-manychat-token"}
+            }
+        },
+        {
+            "client_id": "beauty_salon",
+            "name": "Beauty Salon",
+            "config_file": "configs/beauty_salon.yaml",
+            "persona": "вежливый стилист",
+            "tone": "формальный",
+            "messengers": {
+                "telegram": {"token": "beauty-telegram-token"},
+                "whatsapp": {"api_key": "beauty-whatsapp-key", "webhook_url": "http://ai_agent:8000/webhook"},
+                "instagram": {"username": "beauty_inst", "password": "your-beauty-password"},
+                "tiktok": {"manychat_api_token": "beauty-manychat-token"}
+            }
+        },
+        {
+            "client_id": "green_travel",
+            "name": "GreenTravel",
+            "config_file": "configs/green_travel.yaml",
+            "persona": "дружелюбный экологический гид",
+            "tone": "дружелюбный",
+            "messengers": {
+                "telegram": {"token": "green-telegram-token"},
+                "whatsapp": {"api_key": "green-whatsapp-key", "webhook_url": "http://ai_agent:8000/webhook"},
+                "instagram": {"username": "green_travel_inst", "password": "your-green-password"},
+                "tiktok": {"manychat_api_token": "green-manychat-token"}
+            }
         }
-    }
-    await db.clients.update_one({"client_id": "green_travel"}, {"$set": client_data}, upsert=True)
+    ]
+    for client_data in clients:
+        await db.clients.update_one({"client_id": client_data["client_id"]}, {"$set": client_data}, upsert=True)
 
     # Импорт туров из CSV
     with open("tours.csv", newline='', encoding='utf-8') as csvfile:
@@ -812,7 +841,7 @@ async def init_mongo():
     }
     await db.config.update_one({"_id": "settings"}, {"$set": config}, upsert=True)
     
-    print("MongoDB initialized with GreenTravel client and tours")
+    print("MongoDB initialized with multiple clients and tours")
 
 if __name__ == "__main__":
     asyncio.run(init_mongo())
@@ -837,7 +866,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 async def load_client():
-    client_id = os.getenv("CLIENT_ID")
+    client_id = os.getenv("CLIENT_ID", "green_travel")  # По умолчанию green_travel
     if not client_id:
         logger.error("CLIENT_ID environment variable not set")
         raise ValueError("CLIENT_ID missing")
@@ -851,12 +880,12 @@ async def load_client():
     return client_data
 
 async def main():
-    print(f"Starting AI Agent for client {os.getenv('CLIENT_ID')}...")
+    print(f"Starting AI Agent for client {os.getenv('CLIENT_ID', 'green_travel')}...")
     client = await load_client()
     client_id = client["client_id"]
     messengers = client["messengers"]
     tasks = []
-    whatsapp_ports = {"green_travel": 8080}
+    whatsapp_ports = {"tourism": 8080, "beauty_salon": 8081, "green_travel": 8082}
 
     # Telegram
     if "telegram" in messengers:
@@ -868,7 +897,7 @@ async def main():
         api_key = messengers["whatsapp"]["api_key"]
         webhook_url = messengers["whatsapp"]["webhook_url"]
         port = whatsapp_ports.get(client_id, 8080)
-        tasks.append(start_whatsapp(client_id, f"http://evolution_api_{client_id}:8080", api_key, webhook_url, port))
+        tasks.append(start_whatsapp(client_id, "http://evolution-api:8080", api_key, webhook_url, port))
     
     # Instagram
     if "instagram" in messengers:
@@ -919,14 +948,14 @@ async def remove_client(client_id):
     print(f"Client {client_id} removed")
 
 if __name__ == "__main__":
-    # Пример использования
+    # Пример добавления клиента
     asyncio.run(add_client(
-        "green_travel",
-        "GreenTravel",
-        "configs/green_travel.yaml",
-        "дружелюбный экологический гид",
+        "new_client",
+        "New Client",
+        "configs/new_client.yaml",
+        "дружелюбный помощник",
         "дружелюбный",
-        {"telegram": {"token": "green-telegram-token"}, "whatsapp": {"api_key": "green-whatsapp-key", "webhook_url": "http://ai_agent_green_travel:8000/webhook"}, "instagram": {"username": "green_travel_inst", "password": "your-instagram-password"}, "tiktok": {"manychat_api_token": "your-manychat-api-token"}}
+        {"telegram": {"token": "new-telegram-token"}, "whatsapp": {"api_key": "new-whatsapp-key", "webhook_url": "http://ai_agent:8000/webhook"}, "instagram": {"username": "new_inst", "password": "your-new-password"}, "tiktok": {"manychat_api_token": "new-manychat-token"}}
     ))
 EOF
 
@@ -955,4 +984,4 @@ destination,description,popularity,price
 Мальдивы,идеально для отдыха на островах,80,800
 EOF
 
-echo "Project setup completed! Run 'docker-compose up -d' to start the project."
+echo "Project setup completed! Run 'docker-compose up -d' to start the project. To specify a client, use 'CLIENT_ID=<client_id> TELEGRAM_TOKEN=<token> WHATSAPP_API_KEY=<key> INSTAGRAM_USERNAME=<username> INSTAGRAM_PASSWORD=<password> MANYCHAT_API_TOKEN=<token> docker-compose up -d'."
