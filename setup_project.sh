@@ -2,7 +2,7 @@
 
 # Создание директорий и файлов
 mkdir -p ai-agent-platform/{configs,core,dev_gui,i18n,tests,ui/telegram_bot,ui/whatsapp_evolution,ui/instagram,ui/tiktok} && \
-touch ai-agent-platform/{configs/tourism.yaml,configs/beauty_salon.yaml,configs/green_travel.yaml,core/__init__.py,core/actions.py,core/flows_loader.py,core/router.py,core/triggers.py,dev_gui/__init__.py,dev_gui/editor.py,i18n/{az.json,en.json},tests/__init__.py,tests/test_router.py,ui/__init__.py,ui/telegram_bot/{__init__.py,main.py},ui/whatsapp_evolution/{__init__.py,main.py},ui/instagram/{__init__.py,main.py},ui/tiktok/{__init__.py,main.py},Dockerfile.fundament,docker-compose.yml,init_mongo.py,main.py,manage_clients.py,requirements.txt}
+touch ai-agent-platform/{configs/tourism.yaml,configs/beauty_salon.yaml,configs/green_travel.yaml,core/__init__.py,core/actions.py,core/flows_loader.py,core/router.py,core/triggers.py,dev_gui/__init__.py,dev_gui/editor.py,i18n/{az.json,en.json},tests/__init__.py,tests/test_router.py,ui/__init__.py,ui/telegram_bot/{__init__.py,main.py},ui/whatsapp_evolution/{__init__.py,main.py},ui/instagram/{__init__.py,main.py},ui/tiktok/{__init__.py,main.py},Dockerfile.fundament,docker-compose.yml,init_mongo.py,main.py,manage_clients.py,requirements.txt,tours.csv}
 
 # Добавление кода в файлы
 # configs/tourism.yaml
@@ -179,7 +179,7 @@ async def call_openrouter(client_id: str, user_id: str, text: str, lang="az", we
     for entry in history:
         messages.append({"role": "user", "content": entry["input"]})
         messages.append({"role": "assistant", "content": entry["response"]})
-    messages.append({"role": "user", "content": f"{text}\nWeather info: {weather_info}"})
+    messages.append({"role": "user", "content": f"{text}\nWeather info: {weather_info}")
     
     data = {
         "model": "deepseek/deepseek-chat",
@@ -338,7 +338,7 @@ app = Flask(__name__)
 
 @app.route("/editor", methods=["GET", "POST"])
 def editor():
-    config_path = os.getenv("CONFIG_PATH", "configs/tourism.yaml")
+    config_path = os.getenv("CONFIG_PATH", "configs/green_travel.yaml")
     if request.method == "POST":
         data = request.form.get("config")
         with open(config_path, "w", encoding="utf-8") as f:
@@ -447,7 +447,7 @@ async def start_telegram(client_id: str, telegram_token: str):
         raise
 
 if __name__ == "__main__":
-    asyncio.run(start_telegram("tourism", "your-telegram-token"))
+    asyncio.run(start_telegram("green_travel", "green-telegram-token"))
 EOF
 
 # ui/whatsapp_evolution/__init__.py
@@ -523,7 +523,7 @@ async def start_whatsapp(client_id: str, api_url: str, api_key: str, webhook_url
     await asyncio.Event().wait()  # Keep running
 
 if __name__ == "__main__":
-    asyncio.run(start_whatsapp("tourism", "http://evolution_api_tourism:8080", "6DA4808EB84-4D18-834A-D0B3032D04ABB", "http://34.27.110.42:8000/webhook", 8080))
+    asyncio.run(start_whatsapp("green_travel", "http://evolution_api_green_travel:8080", "green-whatsapp-key", "http://localhost:8000/webhook", 8080))
 EOF
 
 # ui/instagram/__init__.py
@@ -580,7 +580,7 @@ async def start_instagram(client_id: str, username: str, password: str, verifica
             await asyncio.sleep(60)
 
 if __name__ == "__main__":
-    asyncio.run(start_instagram("tourism", "tourism_client", "your-instagram-password"))
+    asyncio.run(start_instagram("green_travel", "green_travel_inst", "your-instagram-password"))
 EOF
 
 # ui/tiktok/__init__.py
@@ -638,7 +638,7 @@ async def start_tiktok(client_id: str, manychat_api_token: str):
             await asyncio.sleep(60)  # Проверяем каждую минуту
 
 if __name__ == "__main__":
-    asyncio.run(start_tiktok("tourism", "your-manychat-api-token"))
+    asyncio.run(start_tiktok("green_travel", "your-manychat-api-token"))
 EOF
 
 # Dockerfile.fundament
@@ -725,6 +725,17 @@ services:
         aliases:
           - evolution_api_green_travel
 
+  init_mongo:
+    build:
+      context: .
+      dockerfile: Dockerfile.init_mongo
+    depends_on:
+      - mongodb
+    networks:
+      app-network:
+        aliases:
+          - init_mongo
+
 networks:
   app-network:
     driver: bridge
@@ -732,6 +743,18 @@ networks:
 volumes:
   mongo_data:
   n8n_data:
+EOF
+
+# Dockerfile.init_mongo
+cat << 'EOF' > ai-agent-platform/Dockerfile.init_mongo
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements.txt init_mongo.py ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+CMD ["python", "init_mongo.py"]
 EOF
 
 # init_mongo.py
@@ -898,14 +921,13 @@ async def remove_client(client_id):
 if __name__ == "__main__":
     # Пример использования
     asyncio.run(add_client(
-        "new_client",
-        "New Client",
-        "configs/new_client.yaml",
-        "помощник нового клиента",
-        "формальный",
-        {"telegram": {"token": "new-telegram-token"}, "whatsapp": {"api_key": "new-whatsapp-key", "webhook_url": "http://ai_agent:8000/webhook"}}
+        "green_travel",
+        "GreenTravel",
+        "configs/green_travel.yaml",
+        "дружелюбный экологический гид",
+        "дружелюбный",
+        {"telegram": {"token": "green-telegram-token"}, "whatsapp": {"api_key": "green-whatsapp-key", "webhook_url": "http://ai_agent_green_travel:8000/webhook"}, "instagram": {"username": "green_travel_inst", "password": "your-instagram-password"}, "tiktok": {"manychat_api_token": "your-manychat-api-token"}}
     ))
-    # asyncio.run(remove_client("new_client"))
 EOF
 
 # requirements.txt
@@ -921,6 +943,16 @@ pytest-asyncio==0.23.8
 aiohttp==3.9.5
 pymongo==4.6.3
 instagrapi==2.1.2
+selenium==4.23.1
+webdriver-manager==4.0.2
 EOF
 
-echo "Project setup completed!"
+# tours.csv
+cat << 'EOF' > ai-agent-platform/tours.csv
+destination,description,popularity,price
+Дубай,солнечно и тепло круглый год,100,500
+Турция,приятный климат и пляжи,90,400
+Мальдивы,идеально для отдыха на островах,80,800
+EOF
+
+echo "Project setup completed! Run 'docker-compose up -d' to start the project."
