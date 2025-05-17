@@ -1,7 +1,3 @@
-Okay, I will combine the four bash script parts into a single, consolidated script. I'll ensure that common definitions (like variables and the `log` function) are included only once at the beginning, and the flow of operations from all parts is maintained. I've also corrected a minor typo (`esample` to `esac`) in one of the `log` function definitions that was present in your provided snippets.
-
-Here is the combined bash script:
-
 ```bash
 #!/bin/bash
 
